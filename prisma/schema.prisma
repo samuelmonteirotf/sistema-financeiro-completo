@@ -1,0 +1,229 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  password  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  creditCards   CreditCard[]
+  expenses      Expense[]
+  fixedExpenses FixedExpense[]
+  loans         Loan[]
+  investments   Investment[]
+  incomes       Income[]
+  budgets       Budget[]
+
+  @@index([email])
+}
+
+model CreditCard {
+  id             String   @id @default(cuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  name           String
+  lastFourDigits String
+  brand          String
+  closingDay     Int      // Dia do fechamento da fatura
+  dueDay         Int      // Dia do vencimento
+  limit          Decimal  @db.Decimal(19, 2) // Precisão financeira: 19 dígitos, 2 decimais
+
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  expenses       Expense[]
+  installments   Installment[]
+
+  @@index([userId])
+  @@index([userId, isActive])
+}
+
+model Category {
+  id        String   @id @default(cuid())
+  name      String
+  type      String   // "expense" ou "income"
+  color     String   @default("#3B82F6")
+  icon      String   @default("circle")
+
+  expenses  Expense[]
+  budgets   Budget[]
+
+  @@unique([name, type])
+}
+
+model Expense {
+  id           String      @id @default(cuid())
+  userId       String
+  user         User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  description  String
+  amount       Decimal     @db.Decimal(19, 2) // Precisão financeira
+  date         DateTime
+
+  creditCardId String?
+  creditCard   CreditCard? @relation(fields: [creditCardId], references: [id], onDelete: SetNull)
+
+  categoryId   String
+  category     Category    @relation(fields: [categoryId], references: [id])
+
+  installments Int         @default(1)  // 1 = à vista, >1 = parcelado
+
+  observations String?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  installmentDetails Installment[]
+
+  @@index([userId])
+  @@index([creditCardId])
+  @@index([date])
+  @@index([userId, date])
+}
+
+model Installment {
+  id                String      @id @default(cuid())
+
+  expenseId         String
+  expense           Expense     @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+
+  installmentNumber Int         // 1, 2, 3...
+  dueDate           DateTime    // Data de vencimento desta parcela
+  amount            Decimal     @db.Decimal(19, 2) // Precisão financeira
+  isPaid            Boolean     @default(false)
+  paidAt            DateTime?
+
+  creditCardId      String?
+  creditCard        CreditCard? @relation(fields: [creditCardId], references: [id], onDelete: SetNull)
+
+  @@index([expenseId])
+  @@index([dueDate])
+  @@index([creditCardId, dueDate])
+}
+
+model FixedExpense {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  description String
+  amount      Decimal  @db.Decimal(19, 2) // Precisão financeira
+  category    String
+  dueDay      Int
+  frequency   String   @default("monthly")
+  isActive    Boolean  @default(true)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId])
+  @@index([userId, isActive])
+}
+
+model Loan {
+  id             String   @id @default(cuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  name           String
+  lenderName     String
+  originalAmount Decimal  @db.Decimal(19, 2) // Precisão financeira
+  currentBalance Decimal  @db.Decimal(19, 2) // Precisão financeira
+  interestRate   Decimal  @db.Decimal(5, 4)  // Taxa de juros: 99.9999%
+  monthlyPayment Decimal  @db.Decimal(19, 2) // Precisão financeira
+  startDate      DateTime
+  endDate        DateTime
+  status         String   @default("active")
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  payments       LoanPayment[]
+
+  @@index([userId])
+  @@index([userId, status])
+}
+
+model Investment {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  name          String
+  type          String
+  amount        Decimal  @db.Decimal(19, 2) // Precisão financeira
+  currentValue  Decimal  @db.Decimal(19, 2) // Precisão financeira
+  purchasePrice Decimal  @db.Decimal(19, 8) // Preço de compra (para cryptos)
+  purchaseDate  DateTime
+  status        String   @default("active")
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model Income {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  description String
+  amount      Decimal  @db.Decimal(19, 2) // Precisão financeira
+  date        DateTime
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([userId, date])
+}
+
+model Budget {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id])
+
+  amount     Decimal  @db.Decimal(19, 2) // Valor alocado para a categoria
+  month      Int      // 1-12
+  year       Int      // 2025, 2026, etc
+  isActive   Boolean  @default(true)
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([userId, categoryId, month, year])
+  @@index([userId, month, year])
+}
+
+model LoanPayment {
+  id        String   @id @default(cuid())
+  loanId    String
+  loan      Loan     @relation(fields: [loanId], references: [id], onDelete: Cascade)
+
+  amount    Decimal  @db.Decimal(19, 2) // Valor pago
+  principal Decimal  @db.Decimal(19, 2) // Parte que reduziu o principal
+  interest  Decimal  @db.Decimal(19, 2) // Parte que foi juros
+  date      DateTime // Data do pagamento
+  isPaid    Boolean  @default(false)
+  paidAt    DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([loanId])
+  @@index([loanId, date])
+}
