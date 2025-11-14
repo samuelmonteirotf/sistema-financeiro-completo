@@ -22,10 +22,10 @@ async function main() {
   console.log(`   Senha: senha123`)
   console.log(`   ID: ${userA.id}\n`)
 
-  // Criar despesas para Usuário A
   const categoryA = await prisma.category.upsert({
     where: {
-      name_type: {
+      ownerId_name_type: {
+        ownerId: userA.id,
         name: 'Alimentação',
         type: 'expense',
       },
@@ -36,6 +36,7 @@ async function main() {
       type: 'expense',
       color: '#FF6B6B',
       icon: 'utensils',
+      ownerId: userA.id,
     },
   })
 
@@ -86,7 +87,24 @@ async function main() {
   console.log(`   Senha: senha456`)
   console.log(`   ID: ${userB.id}\n`)
 
-  // Criar despesas para Usuário B
+  const categoryB = await prisma.category.upsert({
+    where: {
+      ownerId_name_type: {
+        ownerId: userB.id,
+        name: 'Essenciais',
+        type: 'expense',
+      },
+    },
+    update: {},
+    create: {
+      name: 'Essenciais',
+      type: 'expense',
+      color: '#4CAF50',
+      icon: 'wallet',
+      ownerId: userB.id,
+    },
+  })
+
   await prisma.expense.createMany({
     data: [
       {
@@ -94,7 +112,7 @@ async function main() {
         description: 'Conta de Luz do B',
         amount: 300.0,
         date: new Date(),
-        categoryId: categoryA.id,
+        categoryId: categoryB.id,
         installments: 1,
       },
       {
@@ -102,7 +120,7 @@ async function main() {
         description: 'Internet do B',
         amount: 150.0,
         date: new Date(),
-        categoryId: categoryA.id,
+        categoryId: categoryB.id,
         installments: 1,
       },
       {
@@ -110,7 +128,7 @@ async function main() {
         description: 'Restaurante do B',
         amount: 80.0,
         date: new Date(),
-        categoryId: categoryA.id,
+        categoryId: categoryB.id,
         installments: 1,
       },
     ],

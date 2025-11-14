@@ -1,64 +1,109 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-
-interface AlertPreference {
-  id: string
-  name: string
-  description: string
-  enabled: boolean
-  threshold?: number
-}
+import { useToast } from "@/hooks/use-toast"
+import { apiFetch } from "@/lib/api"
+import type { AlertPreference } from "@/types/alert-preferences"
 
 export function AlertPreferences() {
-  const [preferences, setPreferences] = useState<AlertPreference[]>([
-    {
-      id: "credit-limit",
-      name: "Limite de Crédito",
-      description: "Notificar quando atingir % do limite",
-      enabled: true,
-      threshold: 80,
-    },
-    {
-      id: "budget-exceeded",
-      name: "Orçamento Excedido",
-      description: "Notificar quando exceder orçamento",
-      enabled: true,
-    },
-    {
-      id: "invoice-due",
-      name: "Fatura Próxima",
-      description: "Notificar quando fatura for emitida",
-      enabled: true,
-    },
-    {
-      id: "fixed-expense",
-      name: "Despesa Fixa",
-      description: "Notificar antes de despesa fixa vencer",
-      enabled: true,
-    },
-    {
-      id: "loan-payment",
-      name: "Pagamento de Empréstimo",
-      description: "Notificar sobre pagamentos de empréstimos",
-      enabled: false,
-    },
-  ])
+  const { toast } = useToast()
+  const [preferences, setPreferences] = useState<AlertPreference[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [isSaving, setIsSaving] = useState(false)
+
+  useEffect(() => {
+    let mounted = true
+    void (async () => {
+      try {
+        setIsLoading(true)
+        const response = await apiFetch("/api/settings/alerts")
+        if (!response.ok) {
+          throw new Error("Não foi possível carregar preferências")
+        }
+        const data = (await response.json()) as AlertPreference[]
+        if (mounted) {
+          setPreferences(data)
+        }
+      } catch (error) {
+        console.error("Erro ao carregar preferências:", error)
+        toast({
+          variant: "destructive",
+          title: "Erro ao carregar preferências",
+          description: "Tente novamente mais tarde.",
+        })
+      } finally {
+        if (mounted) {
+          setIsLoading(false)
+        }
+      }
+    })()
+
+    return () => {
+      mounted = false
+    }
+  }, [toast])
 
   const handleToggle = (id: string) => {
-    setPreferences(preferences.map((pref) => (pref.id === id ? { ...pref, enabled: !pref.enabled } : pref)))
+    setPreferences((prev) => prev.map((pref) => (pref.id === id ? { ...pref, enabled: !pref.enabled } : pref)))
   }
 
   const handleThresholdChange = (id: string, value: number) => {
-    setPreferences(preferences.map((pref) => (pref.id === id ? { ...pref, threshold: value } : pref)))
+    setPreferences((prev) =>
+      prev.map((pref) =>
+        pref.id === id
+          ? {
+              ...pref,
+              threshold: Number.isNaN(value) ? pref.threshold : value,
+            }
+          : pref
+      )
+    )
   }
 
-  const handleSave = () => {
-    console.log("Preferências salvas:", preferences)
+  const handleSave = async () => {
+    try {
+      setIsSaving(true)
+      const response = await apiFetch("/api/settings/alerts", {
+        method: "PUT",
+        json: preferences,
+      })
+
+      if (!response.ok) {
+        throw new Error("Falha ao salvar preferências")
+      }
+
+      toast({
+        title: "Preferências salvas",
+        description: "Atualizamos suas notificações.",
+      })
+    } catch (error) {
+      console.error("Erro ao salvar preferências:", error)
+      toast({
+        variant: "destructive",
+        title: "Falha ao salvar",
+        description: "Tente novamente mais tarde.",
+      })
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Preferências de Alertas</CardTitle>
+          <CardDescription>Customize as notificações que deseja receber</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground">Carregando preferências...</p>
+        </CardContent>
+      </Card>
+    )
   }
 
   return (
@@ -99,8 +144,8 @@ export function AlertPreferences() {
         ))}
 
         <div className="flex gap-2 pt-4">
-          <Button onClick={handleSave} className="flex-1">
-            Salvar Preferências
+          <Button onClick={handleSave} className="flex-1" disabled={isSaving}>
+            {isSaving ? "Salvando..." : "Salvar Preferências"}
           </Button>
         </div>
       </CardContent>

@@ -4,7 +4,10 @@ import { useCallback, useEffect, useState } from "react"
 
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
 import { formatCurrency } from "@/lib/utils"
+import { LoanFormDialog, type LoanFormValues } from "@/components/loans/loan-form-dialog"
+import { apiFetch } from "@/lib/api"
 
 interface Loan {
   id: string
@@ -15,12 +18,17 @@ interface Loan {
   monthlyPayment: number
   interestRate: number
   status: string
+  loanType: "loan" | "financing"
+  startDate: string
+  endDate: string
 }
 
 export function LoanList() {
   const [loans, setLoans] = useState<Loan[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [editingLoan, setEditingLoan] = useState<Loan | null>(null)
 
   const loadLoans = useCallback(async () => {
     try {
@@ -33,7 +41,11 @@ export function LoanList() {
       }
 
       const data = await response.json()
-      setLoans(data)
+      const parsed = data.map((loan: Loan) => ({
+        ...loan,
+        loanType: loan.loanType ?? "loan",
+      }))
+      setLoans(parsed)
     } catch (err) {
       console.error("Erro ao carregar empréstimos:", err)
       setError("Não foi possível carregar os empréstimos.")
@@ -52,11 +64,82 @@ export function LoanList() {
     return Math.min(Math.max((paid / loan.originalAmount) * 100, 0), 100)
   }
 
+  const handleSaveLoan = async (values: LoanFormValues) => {
+    const payload = {
+      ...values,
+      originalAmount: Number(values.originalAmount),
+      currentBalance: Number(values.currentBalance),
+      monthlyPayment: Number(values.monthlyPayment),
+      interestRate: Number(values.interestRate),
+    }
+
+    const endpoint = values.id ? `/api/loans/${values.id}` : "/api/loans"
+    const method = values.id ? "PUT" : "POST"
+
+    const response = await apiFetch(endpoint, {
+      method,
+      body: JSON.stringify(payload),
+    })
+
+    if (!response.ok) {
+      throw new Error("Falha ao salvar empréstimo.")
+    }
+
+    await loadLoans()
+  }
+
+  const handleDeleteLoan = async (loan: Loan) => {
+    if (!window.confirm(`Deseja excluir o ${loan.loanType === "financing" ? "financiamento" : "empréstimo"} "${loan.name}"?`)) {
+      return
+    }
+
+    const response = await apiFetch(`/api/loans/${loan.id}`, {
+      method: "DELETE",
+    })
+
+    if (!response.ok) {
+      throw new Error("Falha ao remover empréstimo.")
+    }
+
+    await loadLoans()
+  }
+
+  const prepareFormValues = (loan?: Loan | null): LoanFormValues | null => {
+    if (!loan) return null
+    const normalizeDate = (value?: string) => {
+      if (!value) return new Date().toISOString().slice(0, 10)
+      return value.slice(0, 10)
+    }
+    return {
+      id: loan.id,
+      name: loan.name,
+      lenderName: loan.lenderName,
+      originalAmount: loan.originalAmount,
+      currentBalance: loan.currentBalance,
+      monthlyPayment: loan.monthlyPayment,
+      interestRate: loan.interestRate,
+      startDate: normalizeDate(loan.startDate),
+      endDate: normalizeDate(loan.endDate),
+      status: loan.status,
+      loanType: loan.loanType ?? "loan",
+    }
+  }
+
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Empréstimos</CardTitle>
-        <CardDescription>Seus empréstimos e financiamentos</CardDescription>
+      <CardHeader className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div>
+          <CardTitle>Empréstimos e Financiamentos</CardTitle>
+          <CardDescription>Cadastre seus contratos e acompanhe a evolução</CardDescription>
+        </div>
+        <Button
+          onClick={() => {
+            setEditingLoan(null)
+            setIsDialogOpen(true)
+          }}
+        >
+          Novo contrato
+        </Button>
       </CardHeader>
       <CardContent>
         {isLoading ? (
@@ -80,12 +163,29 @@ export function LoanList() {
 
               return (
                 <div key={loan.id} className="rounded-lg border p-4">
-                  <div className="mb-3 flex items-start justify-between">
+                  <div className="mb-3 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                     <div>
                       <h3 className="font-semibold">{loan.name}</h3>
-                      <p className="text-sm text-muted-foreground">{loan.lenderName}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {loan.loanType === "financing" ? "Financiamento" : "Empréstimo"} • {loan.lenderName}
+                      </p>
                     </div>
-                    <Badge className={statusBadgeClass}>{statusLabel}</Badge>
+                    <div className="flex flex-wrap gap-2">
+                      <Badge className={statusBadgeClass}>{statusLabel}</Badge>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setEditingLoan(loan)
+                          setIsDialogOpen(true)
+                        }}
+                      >
+                        Editar
+                      </Button>
+                      <Button variant="destructive" size="sm" onClick={() => void handleDeleteLoan(loan)}>
+                        Remover
+                      </Button>
+                    </div>
                   </div>
 
                   <div className="mb-3 grid grid-cols-2 gap-3 md:grid-cols-4">
@@ -116,6 +216,21 @@ export function LoanList() {
           </div>
         )}
       </CardContent>
+
+      <LoanFormDialog
+        open={isDialogOpen}
+        onOpenChange={(open) => {
+          setIsDialogOpen(open)
+          if (!open) {
+            setEditingLoan(null)
+          }
+        }}
+        onSubmit={async (values) => {
+          await handleSaveLoan(values)
+          setEditingLoan(null)
+        }}
+        initialData={prepareFormValues(editingLoan)}
+      />
     </Card>
   )
 }

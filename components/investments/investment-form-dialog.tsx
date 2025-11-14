@@ -58,13 +58,23 @@ export function InvestmentFormDialog({ onSuccess }: InvestmentFormDialogProps) {
     try {
       const response = await fetch("/api/crypto/prices", {
         method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ action: "list-symbols" }),
       })
 
       if (response.ok) {
         const data = await response.json()
-        // Extrair apenas o nome da moeda (remover USDT)
-        const symbols = data.symbols
-          .map((s: string) => s.replace("USDT", ""))
+        // Extrair símbolo base (ex: BTC de BTCUSDT)
+        const symbols = (data.symbols ?? [])
+          .map((s: any) => {
+            if (typeof s === "string") {
+              return s.replace("USDT", "")
+            }
+            return s.baseAsset ?? s.symbol?.replace("USDT", "")
+          })
+          .filter(Boolean)
           .sort()
         setCryptoSymbols(symbols)
       }

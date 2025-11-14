@@ -6,14 +6,14 @@ const prisma = new PrismaClient()
 async function main() {
   console.log('🔄 Atualizando usuário...')
 
-  const hashedPassword = await bcrypt.hash('Nina123', 10)
+  const hashedPassword = await bcrypt.hash('SenhaFicticia123', 10)
 
   // Deletar usuário antigo se existir
   await prisma.user.deleteMany({
     where: {
       OR: [
-        { email: 'admin@financeiro.com' },
-        { email: 'smonteiro.jr1@gmail.com' }
+        { email: 'admin@example.com' },
+        { email: 'dev.user+finance@example.com' }
       ]
     }
   })
@@ -21,8 +21,8 @@ async function main() {
   // Criar novo usuário
   const user = await prisma.user.create({
     data: {
-      email: 'smonteiro.jr1@gmail.com',
-      name: 'Ministro Xandão',
+      email: 'dev.user+finance@example.com',
+      name: 'Usuário Demo',
       password: hashedPassword,
     },
   })
@@ -50,8 +50,8 @@ async function main() {
 
   console.log('✅ Todos os dados atualizados para o novo usuário')
   console.log('\n📝 Credenciais:')
-  console.log('   Email: smonteiro.jr1@gmail.com')
-  console.log('   Senha: Nina123')
+  console.log('   Email: dev.user+finance@example.com')
+  console.log('   Senha: SenhaFicticia123')
 }
 
 main()

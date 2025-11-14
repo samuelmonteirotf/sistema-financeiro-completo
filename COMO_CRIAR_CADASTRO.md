@@ -74,8 +74,8 @@ curl -X POST http://localhost:3000/auth \
   -H "Content-Type: application/json" \
   -d '{
     "action": "register",
-    "email": "seu@email.com",
-    "password": "senha123",
+    "email": "pessoa@example.com",
+    "password": "SENHA_SEGURA",
     "name": "Seu Nome"
   }'
 ```
@@ -86,7 +86,7 @@ curl -X POST http://localhost:3000/auth \
   "success": true,
   "message": "Usuário registrado com sucesso",
   "user": {
-    "email": "seu@email.com",
+    "email": "pessoa@example.com",
     "name": "Seu Nome"
   }
 }
@@ -98,8 +98,8 @@ curl -X POST http://localhost:3000/auth \
 curl -X POST http://localhost:3000/api/auth/signin \
   -H "Content-Type: application/json" \
   -d '{
-    "email": "seu@email.com",
-    "password": "senha123"
+    "email": "pessoa@example.com",
+    "password": "SENHA_SEGURA"
   }'
 ```
 
@@ -124,7 +124,7 @@ npm run test:isolation
 ```
 USUÁRIO              | DESPESAS | TOTAL
 ---------------------|----------|--------
-seu@email.com        | X        | R$ XX.XX
+pessoa@example.com   | X        | R$ XX.XX
 ```
 
 ### Teste 3: Prisma Studio
@@ -217,17 +217,17 @@ VERIFICAÇÃO DE ISOLAMENTO DE DADOS
 
 1. USUÁRIOS NO SISTEMA:
 ----------------------------------------
-   smonteiro.jr1@gmail.com
-   usuarioa@teste.com
-   usuariob@teste.com
+   dev.user+finance@example.com
+   usuarioa@example.com
+   usuariob@example.com
 
 2. DESPESAS POR USUÁRIO:
 ----------------------------------------
-   usuarioa@teste.com
+   usuarioa@example.com
    Total Despesas: 3
    Total Gasto: R$ 350.00
 
-   usuariob@teste.com
+   usuariob@example.com
    Total Despesas: 3
    Total Gasto: R$ 530.00
 

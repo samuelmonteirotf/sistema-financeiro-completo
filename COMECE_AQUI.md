@@ -246,8 +246,8 @@ fetch('/api/budgets')           ✅
 **ANTES:**
 ```javascript
 const user = await prisma.user.create({
-  email: 'smonteiro.jr1@gmail.com',  ❌ Exposto
-  password: hashedPassword('Nina123') ❌ Exposto
+  email: 'dev.user+finance@example.com',  ❌ Exposto
+  password: hashedPassword('<SEGREDO>') ❌ Exposto
 })
 ```
 

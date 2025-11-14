@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import Decimal from 'decimal.js'
 import { getUserIdOrUnauthorized } from '@/lib/auth-utils'
+import { parseAlertSettings } from '@/lib/alert-settings'
 
 const MS_PER_DAY = 1000 * 60 * 60 * 24
 
@@ -14,7 +15,7 @@ export async function GET() {
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
     const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999)
 
-    const [cards, expenses, incomes, fixedExpenses] = await Promise.all([
+    const [cards, expenses, incomes, fixedExpenses, settings] = await Promise.all([
       prisma.creditCard.findMany({
         where: { userId, isActive: true },
         orderBy: { name: 'asc' }
@@ -46,8 +47,17 @@ export async function GET() {
           userId,
           isActive: true
         }
+      }),
+      prisma.userSettings.findUnique({
+        where: { userId },
       })
     ])
+
+    type ExpenseRecord = { amount: Decimal | number | string; creditCardId: string | null }
+    type IncomeRecord = { amount: Decimal | number | string }
+
+    const expenseRecords = expenses as ExpenseRecord[]
+    const incomeRecords = incomes as IncomeRecord[]
 
     const alerts: Array<{
       id: string
@@ -58,12 +68,16 @@ export async function GET() {
       read: boolean
     }> = []
 
-    const expensesTotal = expenses.reduce((sum, item) =>
-      sum.plus(new Decimal(item.amount.toString())), new Decimal(0))
-    const incomesTotal = incomes.reduce((sum, item) =>
-      sum.plus(new Decimal(item.amount.toString())), new Decimal(0))
+    const expensesTotal = expenseRecords.reduce(
+      (sum: Decimal, item: ExpenseRecord) => sum.plus(new Decimal(item.amount.toString())),
+      new Decimal(0)
+    )
+    const incomesTotal = incomeRecords.reduce(
+      (sum: Decimal, item: IncomeRecord) => sum.plus(new Decimal(item.amount.toString())),
+      new Decimal(0)
+    )
 
-    const expensesByCard = expenses.reduce<Record<string, Decimal>>((acc, exp) => {
+    const expensesByCard = expenseRecords.reduce<Record<string, Decimal>>((acc, exp) => {
       if (!exp.creditCardId) return acc
       const currentAmount = acc[exp.creditCardId] || new Decimal(0)
       acc[exp.creditCardId] = currentAmount.plus(new Decimal(exp.amount.toString()))
@@ -71,7 +85,7 @@ export async function GET() {
     }, {})
 
     // Alertas de limite de cartão
-    cards.forEach((card) => {
+    cards.forEach((card: (typeof cards)[number]) => {
       const cardExpenses = expensesByCard[card.id] || new Decimal(0)
       const cardLimit = new Decimal(card.limit.toString())
       if (cardLimit.lte(0)) {
@@ -92,7 +106,7 @@ export async function GET() {
     })
 
     // Alertas de vencimento de fatura
-    cards.forEach((card) => {
+    cards.forEach((card: (typeof cards)[number]) => {
       let dueDate = new Date(now.getFullYear(), now.getMonth(), card.dueDay)
       if (dueDate < now) {
         dueDate = new Date(now.getFullYear(), now.getMonth() + 1, card.dueDay)
@@ -112,7 +126,7 @@ export async function GET() {
     })
 
     // Alertas de despesas fixas
-    fixedExpenses.forEach((expense) => {
+    fixedExpenses.forEach((expense: (typeof fixedExpenses)[number]) => {
       let dueDate = new Date(now.getFullYear(), now.getMonth(), expense.dueDay)
       if (dueDate < now) {
         dueDate = new Date(now.getFullYear(), now.getMonth() + 1, expense.dueDay)
@@ -159,7 +173,15 @@ export async function GET() {
       })
     }
 
-    return NextResponse.json(alerts)
+    const alertSettings = parseAlertSettings(settings?.alerts)
+    const readIds = new Set(alertSettings.readIds)
+
+    const enriched = alerts.map((alert) => ({
+      ...alert,
+      read: readIds.has(alert.id),
+    }))
+
+    return NextResponse.json(enriched)
   } catch (error) {
     console.error('Error fetching alerts:', error)
     return NextResponse.json(

@@ -2,8 +2,8 @@
 
 import type React from "react"
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
+import { Suspense, useState } from "react"
+import { useSearchParams } from "next/navigation"
 import { signIn } from "next-auth/react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -11,12 +11,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 
-export default function LoginPage() {
-  const router = useRouter()
+function LoginForm() {
+  const searchParams = useSearchParams()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [error, setError] = useState("")
   const [isLoading, setIsLoading] = useState(false)
+
+  const authError = searchParams?.get("error")
+  const displayedError = error || (authError ? "Credenciais inválidas" : "")
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -24,26 +27,13 @@ export default function LoginPage() {
     setIsLoading(true)
 
     try {
-      // Usar NextAuth signIn (seguro, cria sessão JWT no cookie HttpOnly)
-      const result = await signIn("credentials", {
+      await signIn("credentials", {
         email,
         password,
-        redirect: false,
+        callbackUrl: "/dashboard",
       })
-
-      if (result?.error) {
-        setError("Credenciais inválidas")
-        return
-      }
-
-      if (result?.ok) {
-        // Redirecionar para dashboard
-        router.push("/dashboard")
-        router.refresh()
-      }
     } catch (err) {
       setError("Erro ao conectar ao servidor")
-    } finally {
       setIsLoading(false)
     }
   }
@@ -56,14 +46,16 @@ export default function LoginPage() {
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
-          {error && <div className="p-3 bg-destructive/10 text-destructive rounded-md text-sm">{error}</div>}
+          {displayedError && (
+            <div className="p-3 bg-destructive/10 text-destructive rounded-md text-sm">{displayedError}</div>
+          )}
 
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
             <Input
               id="email"
               type="email"
-              placeholder="seu@email.com"
+              placeholder="pessoa@example.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
@@ -95,5 +87,25 @@ export default function LoginPage() {
         </p>
       </CardContent>
     </Card>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <Card>
+          <CardHeader>
+            <CardTitle>Fazer Login</CardTitle>
+            <CardDescription>Carregando formulário...</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="h-32 animate-pulse rounded-md bg-muted" />
+          </CardContent>
+        </Card>
+      }
+    >
+      <LoginForm />
+    </Suspense>
   )
 }

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import Decimal from 'decimal.js'
 import { getUserIdOrUnauthorized } from '@/lib/auth-utils'
+import { fetchCryptoPrices } from '@/lib/crypto-prices'
 
 export async function POST(request: Request) {
   try {
@@ -27,16 +28,8 @@ export async function POST(request: Request) {
     // Extrair símbolos únicos (assumindo que name é o símbolo, ex: "BTC", "ETH")
     const symbols = [...new Set(cryptoInvestments.map(inv => `${inv.name}USDT`))]
 
-    // Buscar preços atuais
-    const pricesResponse = await fetch(
-      `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/crypto/prices?symbols=${symbols.join(',')}`
-    )
-
-    if (!pricesResponse.ok) {
-      throw new Error('Erro ao buscar preços das criptomoedas')
-    }
-
-    const pricesData = await pricesResponse.json()
+    // Buscar preços atuais diretamente da Binance
+    const pricesData = await fetchCryptoPrices(symbols, { useCache: false })
     const priceMap = new Map(
       pricesData.prices.map((p: any) => [p.symbol, p.priceBrl])
     )
@@ -59,7 +52,6 @@ export async function POST(request: Request) {
           where: { id: investment.id },
           data: {
             currentValue: currentValue.toNumber(),
-            purchasePrice: priceBrl.toNumber() // Atualizar preço atual
           }
         })
 

@@ -6,8 +6,8 @@ const prisma = new PrismaClient()
 async function main() {
   console.log('🔍 Testando login...\n')
 
-  const email = 'usuarioa@teste.com'
-  const senha = 'senha123'
+  const email = process.env.TEST_USER_EMAIL ?? 'dev.user+finance@example.com'
+  const seedUserSecret = process.env.TEST_USER_PASSWORD ?? 'senha_teste_segura'
 
   // Buscar usuário
   const user = await prisma.user.findUnique({
@@ -28,14 +28,14 @@ async function main() {
 
   // Testar senha
   console.log('🔐 Testando senha...')
-  const passwordMatch = await bcrypt.compare(senha, user.password)
+  const passwordMatch = await bcrypt.compare(seedUserSecret, user.password)
 
   if (passwordMatch) {
     console.log('✅ SENHA CORRETA!')
-    console.log(`   A senha "${senha}" corresponde ao hash`)
+    console.log(`   A senha "${seedUserSecret}" corresponde ao hash`)
   } else {
     console.log('❌ SENHA INCORRETA!')
-    console.log(`   A senha "${senha}" NÃO corresponde ao hash`)
+    console.log(`   A senha "${seedUserSecret}" NÃO corresponde ao hash`)
   }
   console.log()
 

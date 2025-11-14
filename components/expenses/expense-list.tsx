@@ -4,11 +4,15 @@ import { useCallback, useEffect, useMemo, useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { ExpenseForm } from "./expense-form"
 import { formatCurrency } from "@/lib/utils"
-import { endOfMonth, format, startOfMonth, subMonths } from "date-fns"
+import { endOfMonth, format, startOfMonth } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { useSubscription } from "@/hooks/useSubscription"
+import { useToast } from "@/hooks/use-toast"
+import { apiFetch } from "@/lib/api"
 
 interface Expense {
   id: string
@@ -33,19 +37,23 @@ export function ExpenseList() {
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const currentMonthValue = format(new Date(), "yyyy-MM")
-  const [selectedMonth, setSelectedMonth] = useState<string>(currentMonthValue)
+  const { toast } = useToast()
+  const subscription = useSubscription()
+  const canAddExpense = subscription.canCreate("expenses")
+  const expenseLimit = subscription.limits.expenses ?? -1
+  const [monthOptions, setMonthOptions] = useState<Array<{ value: string; label: string }>>([])
+  const [selectedMonth, setSelectedMonth] = useState<string>("all")
+  const [didSetInitialMonth, setDidSetInitialMonth] = useState(false)
 
-  const monthOptions = useMemo(() => {
-    const options = []
-    for (let i = 0; i < 12; i++) {
-      const date = subMonths(new Date(), i)
-      options.push({
-        value: format(date, "yyyy-MM"),
-        label: format(date, "MMMM yyyy", { locale: ptBR }),
-      })
+  const fetchAvailableMonths = useCallback(async () => {
+    try {
+      const response = await fetch("/api/expenses/months")
+      if (!response.ok) return
+      const data: Array<{ value: string; label: string }> = await response.json()
+      setMonthOptions(data)
+    } catch (error) {
+      console.error("Erro ao carregar meses disponíveis:", error)
     }
-    return options
   }, [])
 
   const loadData = useCallback(
@@ -92,28 +100,56 @@ export function ExpenseList() {
   )
 
   useEffect(() => {
+    void fetchAvailableMonths()
+  }, [fetchAvailableMonths])
+
+  useEffect(() => {
+    if (monthOptions.length === 0) {
+      if (selectedMonth !== "all") {
+        setSelectedMonth("all")
+      }
+      return
+    }
+
+    if (!didSetInitialMonth) {
+      setSelectedMonth(monthOptions[0].value)
+      setDidSetInitialMonth(true)
+      return
+    }
+
+    if (selectedMonth !== "all" && !monthOptions.some((option) => option.value === selectedMonth)) {
+      setSelectedMonth(monthOptions[0].value)
+    }
+  }, [monthOptions, selectedMonth, didSetInitialMonth])
+
+  useEffect(() => {
     void loadData(selectedMonth)
   }, [selectedMonth, loadData])
 
   const handleAddExpense = async (data: any) => {
     try {
-      const response = await fetch("/api/expenses", {
+      const response = await apiFetch("/api/expenses", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       })
 
       if (response.ok) {
-        // Recarregar lista
+        await fetchAvailableMonths()
         await loadData(selectedMonth)
         setIsFormOpen(false)
-      } else {
-        const error = await response.json()
-        alert(error.error || "Erro ao criar despesa")
+      } else if (response.status !== 402) {
+        const errorBody = await response.json()
+        toast({
+          title: "Erro ao criar despesa",
+          description: errorBody.error || "Tente novamente em instantes.",
+        })
       }
     } catch (error) {
       console.error("Erro ao adicionar despesa:", error)
-      alert("Erro ao adicionar despesa")
+      toast({
+        title: "Erro ao criar despesa",
+        description: "Tente novamente em instantes.",
+      })
     }
   }
 
@@ -133,6 +169,13 @@ export function ExpenseList() {
     )
   }
 
+  const handleMonthChange = (value: string) => {
+    setSelectedMonth(value)
+    if (value !== "all") {
+      setDidSetInitialMonth(true)
+    }
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -140,7 +183,7 @@ export function ExpenseList() {
           <h2 className="text-2xl font-bold">Suas Despesas</h2>
         </div>
         <div className="flex items-center gap-2">
-          <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+          <Select value={selectedMonth} onValueChange={handleMonthChange}>
             <SelectTrigger className="w-[200px]">
               <SelectValue placeholder="Selecione o mês" />
             </SelectTrigger>
@@ -153,17 +196,35 @@ export function ExpenseList() {
               ))}
             </SelectContent>
           </Select>
-          <Button onClick={() => setIsFormOpen(true)}>Adicionar Despesa</Button>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button onClick={() => canAddExpense && setIsFormOpen(true)} disabled={!canAddExpense}>
+                  Adicionar Despesa
+                </Button>
+              </TooltipTrigger>
+              {!canAddExpense && (
+                <TooltipContent align="end">
+                  Limite do plano atingido. Faça upgrade para continuar registrando.
+                </TooltipContent>
+              )}
+            </Tooltip>
+          </TooltipProvider>
         </div>
       </div>
 
       <Card>
-        <CardHeader>
-          <CardTitle>Lista de Despesas</CardTitle>
-          <CardDescription>
+          <CardHeader>
+            <CardTitle>Lista de Despesas</CardTitle>
+            <CardDescription>
             Total: {formatCurrency(totalExpenses)} • {expenses.length} despesa(s)
-          </CardDescription>
-        </CardHeader>
+            </CardDescription>
+            {expenseLimit > -1 && (
+              <Badge variant={subscription.usage.expenses / expenseLimit > 0.8 ? "destructive" : "secondary"}>
+                {subscription.usage.expenses}/{expenseLimit} despesas neste plano
+              </Badge>
+            )}
+          </CardHeader>
         <CardContent>
           {error && (
             <p className="mb-4 text-sm text-red-500">

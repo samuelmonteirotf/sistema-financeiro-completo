@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getUserIdOrUnauthorized } from '@/lib/auth-utils'
 import { z } from 'zod'
+import { checkLimit, recordUsage } from '@/lib/limits'
+import { paymentRequired } from '@/lib/http'
 
 export const cardSchema = z.object({
   name: z.string().trim().min(1, 'Nome é obrigatório'),
@@ -65,6 +67,16 @@ export async function POST(request: Request) {
     const userId = await getUserIdOrUnauthorized()
     if (userId instanceof NextResponse) return userId
 
+    const limitCheck = await checkLimit(userId, 'cards')
+    if (!limitCheck.ok) {
+      return paymentRequired({
+        resource: 'cards',
+        requiredPlan: limitCheck.requiredPlan,
+        used: limitCheck.used,
+        limit: limitCheck.limit,
+      })
+    }
+
     const body = await request.json()
     const validated = cardSchema.parse(body)
 
@@ -80,6 +92,14 @@ export async function POST(request: Request) {
         isActive: true,
       }
     })
+
+    await recordUsage(
+      limitCheck.subscriptionId,
+      'cards',
+      limitCheck.used + 1,
+      limitCheck.limit,
+      limitCheck.plan
+    )
 
     return NextResponse.json(card, { status: 201 })
   } catch (error) {

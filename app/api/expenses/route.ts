@@ -3,6 +3,8 @@ import { prisma } from '@/lib/prisma'
 import { expenseSchema } from '@/lib/validations/expense'
 import { calculateInstallments } from '@/lib/utils/calculations'
 import { getUserIdOrUnauthorized } from '@/lib/auth-utils'
+import { checkLimit, recordUsage } from '@/lib/limits'
+import { paymentRequired } from '@/lib/http'
 
 export async function GET(request: Request) {
   try {
@@ -63,10 +65,31 @@ export async function POST(request: Request) {
     const userId = await getUserIdOrUnauthorized()
     if (userId instanceof NextResponse) return userId
 
+    const limitCheck = await checkLimit(userId, 'expenses')
+    if (!limitCheck.ok) {
+      return paymentRequired({
+        resource: 'expenses',
+        requiredPlan: limitCheck.requiredPlan,
+        used: limitCheck.used,
+        limit: limitCheck.limit,
+      })
+    }
+
     const body = await request.json()
 
     // Validar com Zod
     const validatedData = expenseSchema.parse(body)
+
+    const category = await prisma.category.findFirst({
+      where: { id: validatedData.categoryId, ownerId: userId },
+    })
+
+    if (!category) {
+      return NextResponse.json(
+        { error: 'Categoria não encontrada' },
+        { status: 404 }
+      )
+    }
 
     const amountDecimal = validatedData.amount
     const amount = amountDecimal.toNumber()
@@ -79,7 +102,7 @@ export async function POST(request: Request) {
         amount,
         date: validatedData.date,
         creditCardId: validatedData.creditCardId,
-        categoryId: validatedData.categoryId,
+        categoryId: category.id,
         installments: validatedData.installments,
         observations: validatedData.observations
       }
@@ -114,6 +137,14 @@ export async function POST(request: Request) {
     })
 
     const responsePayload = expenseWithRelations ?? expense
+
+    await recordUsage(
+      limitCheck.subscriptionId,
+      'expenses',
+      limitCheck.used + 1,
+      limitCheck.limit,
+      limitCheck.plan
+    )
 
     return NextResponse.json(responsePayload, { status: 201 })
   } catch (error) {

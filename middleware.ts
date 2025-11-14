@@ -60,6 +60,9 @@ export const config = {
     "/api/reports/:path*",
     "/api/dashboard/:path*",
     "/api/investments/:path*",
+    "/api/goals/:path*",
     "/api/crypto/:path*",
+    "/api/export/:path*",
+    "/api/settings/:path*",
   ],
 }

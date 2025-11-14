@@ -105,7 +105,12 @@ async function main() {
 
   const categories: any = {}
   for (const cat of categoriesData) {
-    const created = await prisma.category.create({ data: cat })
+    const created = await prisma.category.create({
+      data: {
+        ...cat,
+        ownerId: user.id,
+      },
+    })
     categories[cat.name] = created
   }
   console.log('✅ Categorias criadas:', categoriesData.length, '\n')
@@ -464,8 +469,8 @@ async function main() {
   console.log('=' .repeat(50))
   console.log('\n✅ Todos os seus dados reais foram importados!')
   console.log('\n📝 Credenciais:')
-  console.log('   Email: smonteiro.jr1@gmail.com')
-  console.log('   Senha: Nina123')
+  console.log('   Email: dev.user+finance@example.com')
+  console.log('   Senha: <SEGREDO>')
 }
 
 main()

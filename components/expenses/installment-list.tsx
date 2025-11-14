@@ -1,11 +1,11 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { formatCurrency } from "@/lib/utils"
-import { endOfMonth, format, startOfMonth, subMonths } from "date-fns"
+import { endOfMonth, format, startOfMonth } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
@@ -21,66 +21,97 @@ interface InstallmentSummary {
   nextInstallmentNumber: number
   nextDueDate: string | null
   installmentValue: number
+  isPaidInPeriod: boolean
   isCompleted: boolean
 }
 
 export function InstallmentList() {
-  const currentMonthValue = format(new Date(), "yyyy-MM")
   const [installments, setInstallments] = useState<InstallmentSummary[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [selectedMonth, setSelectedMonth] = useState<string>(currentMonthValue)
+  const [monthOptions, setMonthOptions] = useState<Array<{ value: string; label: string }>>([])
+  const [selectedMonth, setSelectedMonth] = useState<string>("all")
+  const [didSetInitialMonth, setDidSetInitialMonth] = useState(false)
 
-  const monthOptions = useMemo(() => {
-    const options = []
-    for (let i = 0; i < 12; i++) {
-      const date = subMonths(new Date(), i)
-      options.push({
-        value: format(date, "yyyy-MM"),
-        label: format(date, "MMMM yyyy", { locale: ptBR }),
-      })
+  const loadInstallments = useCallback(async (monthValue: string) => {
+    try {
+      setIsLoading(true)
+      setError(null)
+
+      let url = "/api/installments"
+      if (monthValue !== "all") {
+        const baseDate = new Date(`${monthValue}-01T00:00:00`)
+        const params = new URLSearchParams({
+          startDate: startOfMonth(baseDate).toISOString(),
+          endDate: endOfMonth(baseDate).toISOString(),
+        })
+        url += `?${params.toString()}`
+      }
+
+      const response = await fetch(url)
+      if (!response.ok) {
+        throw new Error("Falha ao carregar parcelamentos.")
+      }
+
+      const data = (await response.json()) as InstallmentSummary[]
+      setInstallments(data)
+    } catch (err) {
+      console.error("Erro ao carregar parcelamentos:", err)
+      setError("Não foi possível carregar os parcelamentos.")
+    } finally {
+      setIsLoading(false)
     }
-    return options
+  }, [])
+
+  const fetchAvailableMonths = useCallback(async () => {
+    try {
+      const response = await fetch("/api/installments/months")
+      if (!response.ok) return
+      const data: Array<{ value: string; label: string }> = await response.json()
+      setMonthOptions(data)
+    } catch (error) {
+      console.error("Erro ao carregar meses de parcelamentos:", error)
+    }
   }, [])
 
   useEffect(() => {
-    const loadInstallments = async (monthValue: string) => {
-      try {
-        setIsLoading(true)
-        setError(null)
+    void fetchAvailableMonths()
+  }, [fetchAvailableMonths])
 
-        let url = "/api/installments"
-        if (monthValue !== "all") {
-          const baseDate = new Date(`${monthValue}-01T00:00:00`)
-          const params = new URLSearchParams({
-            startDate: startOfMonth(baseDate).toISOString(),
-            endDate: endOfMonth(baseDate).toISOString(),
-          })
-          url += `?${params.toString()}`
-        }
-
-        const response = await fetch(url)
-        if (!response.ok) {
-          throw new Error("Falha ao carregar parcelamentos.")
-        }
-
-        const data = await response.json()
-        setInstallments(data)
-      } catch (err) {
-        console.error("Erro ao carregar parcelamentos:", err)
-        setError("Não foi possível carregar os parcelamentos.")
-      } finally {
-        setIsLoading(false)
+  useEffect(() => {
+    if (monthOptions.length === 0) {
+      if (selectedMonth !== "all") {
+        setSelectedMonth("all")
       }
+      return
     }
 
+    if (!didSetInitialMonth) {
+      setSelectedMonth(monthOptions[0].value)
+      setDidSetInitialMonth(true)
+      return
+    }
+
+    if (selectedMonth !== "all" && !monthOptions.some((option) => option.value === selectedMonth)) {
+      setSelectedMonth(monthOptions[0].value)
+    }
+  }, [monthOptions, selectedMonth, didSetInitialMonth])
+
+  useEffect(() => {
     void loadInstallments(selectedMonth)
-  }, [selectedMonth])
+  }, [selectedMonth, loadInstallments])
 
   const activeCount = useMemo(
     () => installments.filter((item) => !item.isCompleted).length,
     [installments],
   )
+
+  const handleMonthChange = (value: string) => {
+    setSelectedMonth(value)
+    if (value !== "all") {
+      setDidSetInitialMonth(true)
+    }
+  }
 
   return (
     <div className="space-y-4">
@@ -91,7 +122,7 @@ export function InstallmentList() {
             <CardDescription>
               {activeCount} parcelamento{activeCount === 1 ? "" : "s"} em andamento
             </CardDescription>
-            <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+            <Select value={selectedMonth} onValueChange={handleMonthChange}>
               <SelectTrigger className="w-[200px]">
                 <SelectValue placeholder="Selecione o mês" />
               </SelectTrigger>
@@ -118,7 +149,7 @@ export function InstallmentList() {
           ) : (
             <div className="space-y-3">
               {installments.map((item) => {
-                const nextDueLabel = item.nextDueDate
+                const installmentLabel = item.nextDueDate
                   ? format(new Date(item.nextDueDate), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })
                   : "Concluído"
 
@@ -137,12 +168,17 @@ export function InstallmentList() {
                             <Badge variant="secondary">{item.category}</Badge>
                             {item.cardName && <Badge variant="outline">{item.cardName}</Badge>}
                             <Badge variant={item.isCompleted ? "default" : "secondary"}>
-                              {item.isCompleted ? "Concluído" : `Próxima: ${progressLabel}`}
+                              {item.isCompleted ? "Concluído" : `Parcela: ${progressLabel}`}
                             </Badge>
+                            {selectedMonth !== "all" && (
+                              <Badge variant={item.isPaidInPeriod ? "default" : "destructive"}>
+                                {item.isPaidInPeriod ? "Pago" : "Em aberto"}
+                              </Badge>
+                            )}
                           </div>
                         </div>
                         <p className="text-sm text-muted-foreground">
-                          {item.isCompleted ? "Parcelamento finalizado" : `Vence em ${nextDueLabel}`}
+                          {item.isCompleted ? "Parcelamento finalizado" : `Vence em ${installmentLabel}`}
                         </p>
                       </div>
                       <div className="text-right space-y-1">

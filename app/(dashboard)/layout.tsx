@@ -3,9 +3,12 @@
 import type React from "react"
 
 import { useRouter, usePathname } from "next/navigation"
-import { useEffect, useState } from "react"
 import Link from "next/link"
+import { useEffect } from "react"
+import { useSession, signOut } from "next-auth/react"
 import { Button } from "@/components/ui/button"
+import { useSubscription } from "@/hooks/useSubscription"
+import { StatusBanner } from "@/components/billing/status-banner"
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: "📊" },
@@ -16,6 +19,7 @@ const navItems = [
   { href: "/emprestimos", label: "Empréstimos", icon: "📈" },
   { href: "/investimentos", label: "Investimentos", icon: "💰" },
   { href: "/relatorios", label: "Relatórios", icon: "📊" },
+  { href: "/dashboard/billing", label: "Billing", icon: "💼" },
   { href: "/notificacoes", label: "Notificações", icon: "🔔" },
 ]
 
@@ -26,27 +30,23 @@ export default function DashboardLayout({
 }) {
   const router = useRouter()
   const pathname = usePathname()
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
-  const [isLoading, setIsLoading] = useState(true)
+  const { status } = useSession()
+  const subscription = useSubscription()
+  const showStatusBanner = ["past_due", "incomplete", "incomplete_expired", "unpaid"].includes(
+    subscription.status
+  )
 
   useEffect(() => {
-    const user = localStorage.getItem("user")
-    if (!user) {
-      router.push("/login")
-    } else {
-      setIsAuthenticated(true)
-      setIsLoading(false)
+    if (status === "unauthenticated") {
+      router.replace("/login")
     }
-  }, [router])
+  }, [status, router])
 
   const handleLogout = () => {
-    localStorage.removeItem("user")
-    localStorage.clear() // Limpar todo o localStorage
-    router.push("/login")
-    router.refresh() // Forçar refresh
+    void signOut({ callbackUrl: "/login" })
   }
 
-  if (isLoading) {
+  if (status === "loading") {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <p>Carregando...</p>
@@ -54,7 +54,7 @@ export default function DashboardLayout({
     )
   }
 
-  if (!isAuthenticated) {
+  if (status === "unauthenticated") {
     return null
   }
 
@@ -86,7 +86,12 @@ export default function DashboardLayout({
 
         {/* Main Content */}
         <div className="md:col-span-4">
-          <div className="space-y-6">{children}</div>
+          <div className="space-y-6">
+            {showStatusBanner && (
+              <StatusBanner status={subscription.status} currentPeriodEnd={subscription.currentPeriodEnd} />
+            )}
+            {children}
+          </div>
         </div>
       </div>
     </div>

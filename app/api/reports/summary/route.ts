@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import Decimal from 'decimal.js'
 import { getUserIdOrUnauthorized } from '@/lib/auth-utils'
+import { hasFeatureAccess } from '@/lib/limits'
+import { forbiddenFeature } from '@/lib/http'
 
 function formatMonthShort(date: Date) {
   const formatter = new Intl.DateTimeFormat('pt-BR', { month: 'short' })
@@ -18,6 +20,17 @@ export async function GET() {
   try {
     const userId = await getUserIdOrUnauthorized()
     if (userId instanceof NextResponse) return userId
+
+    const canAccess = await hasFeatureAccess(userId, 'reports_basic')
+    if (!canAccess) {
+      return forbiddenFeature({
+        resource: 'reports',
+        requiredPlan: 'pro',
+        used: 0,
+        limit: 0,
+        message: 'Relatórios estão disponíveis a partir do plano Pro.',
+      })
+    }
 
     const now = new Date()
     const months: Array<{ start: Date; end: Date }> = []

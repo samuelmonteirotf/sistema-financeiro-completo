@@ -1,14 +1,17 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { useSession } from "next-auth/react"
 import { DashboardHeader } from "@/components/dashboard/dashboard-header"
 import { SummaryCards, type SummaryData } from "@/components/dashboard/summary-cards"
 import { ExpenseChart } from "@/components/dashboard/expense-chart"
 import { RecentExpenses, type RecentExpense } from "@/components/dashboard/recent-expenses"
 import { BudgetOverview } from "@/components/dashboard/budget-overview"
+import { GoalList } from "@/components/goals/goal-list"
+import type { AlertItem } from "@/types/alerts"
 
 export default function DashboardPage() {
-  const [userName, setUserName] = useState("Usuário")
+  const { data: session } = useSession()
   const [summaryData, setSummaryData] = useState<SummaryData>({
     totalIncome: 0,
     totalExpenses: 0,
@@ -19,30 +22,26 @@ export default function DashboardPage() {
   const [expenseData, setExpenseData] = useState<any[]>([])
   const [recentExpenses, setRecentExpenses] = useState<RecentExpense[]>([])
   const [budgetData, setBudgetData] = useState<any[]>([])
+  const [alerts, setAlerts] = useState<AlertItem[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    const user = JSON.parse(localStorage.getItem("user") || "{}")
-    if (user.name) {
-      setUserName(user.name)
-    }
-
     void loadDashboardData()
   }, [])
 
   const loadDashboardData = async () => {
     try {
       setIsLoading(true)
-
       const currentDate = new Date()
       const month = currentDate.getMonth() + 1
       const year = currentDate.getFullYear()
 
-      const [summaryRes, categoryRes, recentRes, budgetRes] = await Promise.all([
+      const [summaryRes, categoryRes, recentRes, budgetRes, alertsRes] = await Promise.all([
         fetch("/api/dashboard/summary"),
         fetch("/api/dashboard/expenses-by-category"),
         fetch("/api/dashboard/recent-expenses"),
         fetch(`/api/budgets?month=${month}&year=${year}`),
+        fetch("/api/alerts"),
       ])
 
       if (summaryRes.ok) {
@@ -64,15 +63,26 @@ export default function DashboardPage() {
         setRecentExpenses(parsedRecent)
       }
 
-      // Usar dados de budget REAL da API
       if (budgetRes.ok) {
         const budgets = await budgetRes.json()
         setBudgetData(budgets)
       } else {
         setBudgetData([])
       }
+
+      if (alertsRes.ok) {
+        const response: Array<Omit<AlertItem, "date"> & { date?: string | Date }> = await alertsRes.json()
+        const parsed = response.map((alert) => ({
+          ...alert,
+          date: alert.date ? new Date(alert.date) : new Date(),
+        }))
+        setAlerts(parsed)
+      } else {
+        setAlerts([])
+      }
     } catch (error) {
       console.error("Erro ao carregar dados do dashboard:", error)
+      setAlerts([])
     } finally {
       setIsLoading(false)
     }
@@ -88,9 +98,11 @@ export default function DashboardPage() {
     )
   }
 
+  const unreadAlerts = alerts.filter((alert) => !alert.read).length
+
   return (
     <div className="space-y-6">
-      <DashboardHeader userName={userName} />
+      <DashboardHeader userName={session?.user?.name} unreadAlerts={unreadAlerts} />
       <SummaryCards data={summaryData} />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -118,9 +130,8 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {budgetData.length > 0 && (
-        <BudgetOverview budgets={budgetData} />
-      )}
+      {budgetData.length > 0 && <BudgetOverview budgets={budgetData} />}
+      <GoalList />
     </div>
   )
 }

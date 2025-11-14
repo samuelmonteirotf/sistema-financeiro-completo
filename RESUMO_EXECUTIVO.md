@@ -154,7 +154,7 @@ Pronto! Acesse: **http://localhost:3000**
 ```bash
 # Procure por credenciais hardcoded
 grep -r "Nina123" .
-grep -r "smonteiro" .
+grep -r "contato@example.com" .
 ```
 Resultado: Nenhum resultado (credenciais removidas!)
 

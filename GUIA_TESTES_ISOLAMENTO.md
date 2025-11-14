@@ -29,8 +29,8 @@ npm run dev
 1. Acesse http://localhost:3000/register
 2. Crie usuário A:
    - Nome: `Usuario A`
-   - Email: `usuarioa@teste.com`
-   - Senha: `senha123`
+   - Email: `usuarioa@example.com`
+   - Senha: `<SENHA_A>`
 
 3. Após login, crie dados para Usuário A:
 
@@ -58,8 +58,8 @@ npm run dev
 1. Acesse http://localhost:3000/register
 2. Crie usuário B:
    - Nome: `Usuario B`
-   - Email: `usuariob@teste.com`
-   - Senha: `senha456`
+   - Email: `usuariob@example.com`
+   - Senha: `<SENHA_B>`
 
 3. Após login, crie dados DIFERENTES para Usuário B:
 
@@ -428,8 +428,8 @@ scenarios:
       - post:
           url: "/api/auth/signin"
           json:
-            email: "usuario{{ $randomNumber(1, 100) }}@teste.com"
-            password: "senha123"
+            email: "usuario{{ $randomNumber(1, 100) }}@example.com"
+            password: "<SENHA_PLACEHOLDER>"
       - get:
           url: "/api/expenses"
 ```

@@ -11,6 +11,8 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url)
     const startDateParam = searchParams.get('startDate')
     const endDateParam = searchParams.get('endDate')
+    const periodStart = startDateParam ? new Date(startDateParam) : null
+    const periodEnd = endDateParam ? new Date(endDateParam) : null
 
     const where: any = {
       userId,
@@ -19,15 +21,12 @@ export async function GET(request: Request) {
       }
     }
 
-    if (startDateParam && endDateParam) {
-      const startDate = new Date(startDateParam)
-      const endDate = new Date(endDateParam)
-
+    if (periodStart && periodEnd) {
       where.installmentDetails = {
         some: {
           dueDate: {
-            gte: startDate,
-            lte: endDate
+            gte: periodStart,
+            lte: periodEnd
           }
         }
       }
@@ -54,10 +53,19 @@ export async function GET(request: Request) {
       const paidInstallments = expense.installmentDetails.filter((inst) => inst.isPaid)
       const paidCount = paidInstallments.length
       const remainingCount = Math.max(totalInstallments - paidCount, 0)
-      const nextInstallment =
+      let referenceInstallment =
         expense.installmentDetails.find((inst) => !inst.isPaid) ??
         expense.installmentDetails[expense.installmentDetails.length - 1] ??
         null
+
+      if (periodStart && periodEnd) {
+        const periodSpecific = expense.installmentDetails.find(
+          (inst) => inst.dueDate >= periodStart && inst.dueDate <= periodEnd
+        )
+        if (periodSpecific) {
+          referenceInstallment = periodSpecific
+        }
+      }
 
       return {
         id: expense.id,
@@ -68,9 +76,10 @@ export async function GET(request: Request) {
         totalInstallments,
         paidCount,
         remainingCount,
-        nextInstallmentNumber: nextInstallment?.installmentNumber ?? totalInstallments,
-        nextDueDate: nextInstallment?.dueDate ?? null,
-        installmentValue: nextInstallment?.amount ?? new Decimal(expense.amount.toString()).dividedBy(totalInstallments).toNumber(),
+        nextInstallmentNumber: referenceInstallment?.installmentNumber ?? totalInstallments,
+        nextDueDate: referenceInstallment?.dueDate ?? null,
+        installmentValue: referenceInstallment?.amount ?? new Decimal(expense.amount.toString()).dividedBy(totalInstallments).toNumber(),
+        isPaidInPeriod: referenceInstallment?.isPaid ?? false,
         isCompleted: remainingCount === 0
       }
     })
@@ -87,7 +96,8 @@ export async function GET(request: Request) {
 
     const payload = summaries.map((item) => ({
       ...item,
-      nextDueDate: item.nextDueDate ? item.nextDueDate.toISOString() : null
+      nextDueDate: item.nextDueDate ? item.nextDueDate.toISOString() : null,
+      isPaidInPeriod: item.isPaidInPeriod
     }))
 
     return NextResponse.json(payload)

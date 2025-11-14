@@ -172,7 +172,7 @@ export function CryptoInvestmentsList({
   }
 
   const totalInvested = investments.reduce((sum, inv) => sum + (inv.investedValue || 0), 0)
-  const totalCurrent = investments.reduce((sum, inv) => sum + inv.currentValue, 0)
+  const totalCurrent = investments.reduce((sum, inv) => sum + (inv.currentValue ?? 0), 0)
   const totalProfit = totalCurrent - totalInvested
   const totalProfitPercent = totalInvested > 0 ? (totalProfit / totalInvested) * 100 : 0
 
@@ -206,19 +206,19 @@ export function CryptoInvestmentsList({
 
         {/* Resumo Total */}
         {investments.length > 0 && (
-          <div className="grid grid-cols-3 gap-4 mb-6 p-4 bg-gradient-to-br from-blue-50 to-purple-50 rounded-lg border">
+          <div className="grid grid-cols-3 gap-4 mb-6 p-4 rounded-lg border border-border bg-card/80 text-card-foreground shadow-inner shadow-black/10">
             <div>
               <p className="text-sm text-muted-foreground">Total Investido</p>
-              <p className="text-lg font-bold">{formatCurrency(totalInvested)}</p>
+              <p className="text-lg font-bold text-foreground">{formatCurrency(totalInvested)}</p>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Valor Atual</p>
-              <p className="text-lg font-bold">{formatCurrency(totalCurrent)}</p>
+              <p className="text-lg font-bold text-primary">{formatCurrency(totalCurrent)}</p>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Lucro/Prejuízo</p>
               <div className="flex items-center gap-2">
-                <p className={`text-lg font-bold ${totalProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                <p className={`text-lg font-bold ${totalProfit >= 0 ? 'text-green-500 dark:text-[#19a34a]' : 'text-red-600 dark:text-destructive'}`}>
                   {formatCurrency(Math.abs(totalProfit))}
                 </p>
                 <Badge variant={totalProfit >= 0 ? "default" : "destructive"}>
@@ -254,10 +254,10 @@ export function CryptoInvestmentsList({
             return (
               <div
                 key={investment.id}
-                className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors group"
+                className="flex items-center justify-between p-4 border border-border rounded-lg bg-card/60 hover:bg-card transition-colors group"
               >
                 <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-gradient-to-br from-purple-400 to-purple-600 rounded-full flex items-center justify-center text-white font-bold">
+                  <div className="w-12 h-12 bg-gradient-to-br from-accent to-secondary rounded-full flex items-center justify-center text-white font-bold shadow-md shadow-accent/30">
                     {investment.name.slice(0, 2).toUpperCase()}
                   </div>
                   <div>
@@ -271,7 +271,7 @@ export function CryptoInvestmentsList({
                 <div className="flex items-center gap-4">
                   <div className="text-right">
                     <div className="flex items-center gap-2 justify-end mb-1">
-                      <p className="font-semibold">{formatCurrency(investment.currentValue)}</p>
+                      <p className="font-semibold text-primary">{formatCurrency(investment.currentValue)}</p>
                       {isPositive ? (
                         <TrendingUp className="h-4 w-4 text-green-600" />
                       ) : (

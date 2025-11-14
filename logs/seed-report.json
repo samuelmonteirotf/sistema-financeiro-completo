@@ -1,0 +1,96 @@
+{
+  "generatedAt": "2025-11-11T00:58:12.296Z",
+  "totals": {
+    "tenants": 3,
+    "users": 6,
+    "cards": 17,
+    "expenses": 100,
+    "loans": 3
+  },
+  "tenants": [
+    {
+      "tenant": "Perfil Solo Oliveira de Nossa Senhora",
+      "type": "pessoa_fisica",
+      "stats": {
+        "users": 1,
+        "cards": 2,
+        "expenses": 10,
+        "categories": 5,
+        "loans": 0
+      },
+      "users": [
+        {
+          "id": "cmhtv46s40003uv4q84xmaqkb",
+          "email": "guilhermemoreira30.pessoa_fisica-desonesto739@example.com",
+          "name": "Guilherme Moreira",
+          "password": "vLmTWRnEnk9T",
+          "plan": "free"
+        }
+      ],
+      "notes": "Usuário individual focado em controle diário."
+    },
+    {
+      "tenant": "Família Silva Batista do Sul",
+      "type": "familia",
+      "stats": {
+        "users": 3,
+        "cards": 5,
+        "expenses": 30,
+        "categories": 21,
+        "loans": 0
+      },
+      "users": [
+        {
+          "id": "cmhtv46uv0014uv4q9s8mcts0",
+          "email": "lauracarvalho28.familia-destrutivo2642@example.com",
+          "name": "Laura Carvalho",
+          "password": "rGVtzLEjPCUy",
+          "plan": "pro"
+        },
+        {
+          "id": "cmhtv46wk0017uv4qlpgbpoji",
+          "email": "ladislaucarvalho.familia-destrutivo4841@example.com",
+          "name": "Ladislau Carvalho",
+          "password": "5ylCYUvbf4El",
+          "plan": "pro"
+        },
+        {
+          "id": "cmhtv46yf001auv4qomm3ce08",
+          "email": "manuelacarvalho.familia-destrutivo4582@example.com",
+          "name": "Manuela Carvalho",
+          "password": "EvpaLjv8SKck",
+          "plan": "pro"
+        }
+      ],
+      "notes": "Família compartilhando orçamento doméstico."
+    },
+    {
+      "tenant": "Microempresa Criativa Costa e Associados",
+      "type": "microempresa",
+      "stats": {
+        "users": 2,
+        "cards": 10,
+        "expenses": 60,
+        "categories": 16,
+        "loans": 3
+      },
+      "users": [
+        {
+          "id": "cmhtv472c004huv4q6ibdjfdk",
+          "email": "alinesouza93.microempresa-generoso4967@example.com",
+          "name": "Aline Souza",
+          "password": "hIn4I1vw17IO",
+          "plan": "premium"
+        },
+        {
+          "id": "cmhtv4742004kuv4qnv66jmdv",
+          "email": "denevalsaraiva.microempresa-generoso995@example.com",
+          "name": "Deneval Saraiva",
+          "password": "cnQlO99N8IEc",
+          "plan": "premium"
+        }
+      ],
+      "notes": "Equipe administrativa + financeiro com visão completa."
+    }
+  ]
+}

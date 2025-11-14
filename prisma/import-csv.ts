@@ -36,9 +36,18 @@ async function main() {
 
   for (const cat of categoriesData) {
     await prisma.category.upsert({
-      where: { name_type: { name: cat.name, type: cat.type } },
+      where: {
+        ownerId_name_type: {
+          ownerId: user.id,
+          name: cat.name,
+          type: cat.type,
+        },
+      },
       update: {},
-      create: cat,
+      create: {
+        ...cat,
+        ownerId: user.id,
+      },
     })
   }
   console.log('✅ Categorias criadas:', categoriesData.length)
@@ -103,7 +112,9 @@ async function main() {
   // Criar algumas despesas de exemplo dos últimos meses
   console.log('\n📊 Criando despesas de exemplo...')
 
-  const categories = await prisma.category.findMany()
+  const categories = await prisma.category.findMany({
+    where: { ownerId: user.id },
+  })
   const alimentacaoCategory = categories.find(c => c.name === 'Alimentação')
   const combustivelCategory = categories.find(c => c.name === 'Combustível')
   const deliveryCategory = categories.find(c => c.name === 'Delivery')

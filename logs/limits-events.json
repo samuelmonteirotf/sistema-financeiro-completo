@@ -1,0 +1,65 @@
+[
+  {
+    "ts": "2025-11-12T13:15:36.667Z",
+    "userId": "cmhw0vxiu0000uv8jd1xeaakb",
+    "plan": "free",
+    "resource": "cards",
+    "used": 0,
+    "limit": 2,
+    "action": "allow"
+  },
+  {
+    "ts": "2025-11-12T13:15:45.906Z",
+    "userId": "cmhw0vxiu0000uv8jd1xeaakb",
+    "plan": "free",
+    "resource": "cards",
+    "used": 1,
+    "limit": 2,
+    "action": "allow"
+  },
+  {
+    "ts": "2025-11-12T13:15:51.026Z",
+    "userId": "cmhw0vxiu0000uv8jd1xeaakb",
+    "plan": "free",
+    "resource": "cards",
+    "used": 2,
+    "limit": 2,
+    "action": "block"
+  },
+  {
+    "ts": "2025-11-12T13:16:01.917Z",
+    "userId": "cmhw0vxiu0000uv8jd1xeaakb",
+    "plan": "free",
+    "resource": "cards",
+    "used": 2,
+    "limit": 2,
+    "action": "block"
+  },
+  {
+    "ts": "2025-11-12T13:42:32.672Z",
+    "userId": "cmhw0vxiu0000uv8jd1xeaakb",
+    "plan": "free",
+    "resource": "expenses",
+    "used": 0,
+    "limit": 50,
+    "action": "allow"
+  },
+  {
+    "ts": "2025-11-12T18:58:04.592Z",
+    "userId": "cmhw0vxiu0000uv8jd1xeaakb",
+    "plan": "free",
+    "resource": "expenses",
+    "used": 1,
+    "limit": 50,
+    "action": "allow"
+  },
+  {
+    "ts": "2025-11-12T18:58:36.091Z",
+    "userId": "cmhw0vxiu0000uv8jd1xeaakb",
+    "plan": "free",
+    "resource": "expenses",
+    "used": 2,
+    "limit": 50,
+    "action": "allow"
+  }
+]

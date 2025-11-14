@@ -7,6 +7,8 @@ import { CategoryBreakdown } from "@/components/reports/category-breakdown"
 import { ExportButton } from "@/components/reports/export-button"
 import { MonthlyReport } from "@/components/reports/monthly-report"
 import { formatCurrency } from "@/lib/utils"
+import { useSubscription } from "@/hooks/useSubscription"
+import { PaywallCard } from "@/components/billing/paywall-card"
 
 interface MonthlyRow {
   month: string
@@ -37,6 +39,9 @@ export default function RelatoriosPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
+  const subscription = useSubscription()
+  const canAccessReports = subscription.can("reports_basic") || subscription.can("reports_advanced")
+
   useEffect(() => {
     const fetchReport = async () => {
       try {
@@ -62,6 +67,21 @@ export default function RelatoriosPage() {
 
     void fetchReport()
   }, [])
+
+  if (!canAccessReports) {
+    return (
+      <PaywallCard
+        requiredPlan="pro"
+        title="Relatórios avançados disponíveis no Pro"
+        description="Visualize insights detalhados, exportações e análises avançadas liberando o plano Pro."
+        benefits={[
+          "Exportação CSV/PDF",
+          "Histórico consolidado",
+          "Suporte prioritário",
+        ]}
+      />
+    )
+  }
 
   return (
     <div className="space-y-6">

@@ -5,20 +5,35 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { formatDate } from "@/lib/utils"
+import type { AlertItem } from "@/types/alerts"
 
-interface Alert {
-  id: string
-  type: "warning" | "danger" | "info" | "success"
-  title: string
-  message: string
-  date: Date
-  read: boolean
+const COLOR_MAP: Record<
+  AlertItem["type"],
+  { container: string; badge: string }
+> = {
+  warning: {
+    container: "bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800",
+    badge: "bg-yellow-100 text-yellow-800 dark:bg-yellow-500/20 dark:text-yellow-200",
+  },
+  danger: {
+    container: "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800",
+    badge: "bg-red-100 text-red-800 dark:bg-red-500/20 dark:text-red-200",
+  },
+  success: {
+    container: "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800",
+    badge: "bg-green-100 text-green-800 dark:bg-green-500/20 dark:text-green-200",
+  },
+  info: {
+    container: "bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800",
+    badge: "bg-blue-100 text-blue-800 dark:bg-blue-500/20 dark:text-blue-200",
+  },
 }
 
 export function AlertCenter() {
-  const [alerts, setAlerts] = useState<Alert[]>([])
+  const [alerts, setAlerts] = useState<AlertItem[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [isSyncing, setIsSyncing] = useState(false)
 
   useEffect(() => {
     const fetchAlerts = async () => {
@@ -31,8 +46,8 @@ export function AlertCenter() {
           throw new Error("Falha ao carregar alertas.")
         }
 
-        const data = await response.json()
-        const parsed = data.map((alert: any) => ({
+        const data: Array<Omit<AlertItem, "date"> & { date?: string | Date }> = await response.json()
+        const parsed: AlertItem[] = data.map((alert) => ({
           ...alert,
           date: alert.date ? new Date(alert.date) : new Date(),
         }))
@@ -46,40 +61,46 @@ export function AlertCenter() {
     }
 
     void fetchAlerts()
+
+    const interval = setInterval(() => {
+      void fetchAlerts()
+    }, 5 * 60 * 1000)
+
+    return () => clearInterval(interval)
   }, [])
 
-  const getAlertColor = (type: string) => {
-    switch (type) {
-      case "warning":
-        return "bg-yellow-50 border-yellow-200"
-      case "danger":
-        return "bg-red-50 border-red-200"
-      case "success":
-        return "bg-green-50 border-green-200"
-      case "info":
-        return "bg-blue-50 border-blue-200"
-      default:
-        return "bg-gray-50 border-gray-200"
+  const handleMarkAsRead = async (id: string) => {
+    const previous = alerts
+    setAlerts((current) => current.map((alert) => (alert.id === id ? { ...alert, read: true } : alert)))
+
+    try {
+      setIsSyncing(true)
+      const response = await fetch("/api/alerts/read", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ alertId: id }),
+      })
+
+      if (!response.ok) {
+        throw new Error("Falha ao sincronizar alerta")
+      }
+    } catch (err) {
+      console.error("Erro ao marcar alerta como lido:", err)
+      setAlerts(previous)
+    } finally {
+      setIsSyncing(false)
     }
   }
 
-  const getAlertBadge = (type: string) => {
-    switch (type) {
-      case "warning":
-        return <Badge className="bg-yellow-100 text-yellow-800">Aviso</Badge>
-      case "danger":
-        return <Badge className="bg-red-100 text-red-800">Alerta</Badge>
-      case "success":
-        return <Badge className="bg-green-100 text-green-800">Sucesso</Badge>
-      case "info":
-        return <Badge className="bg-blue-100 text-blue-800">Informação</Badge>
-      default:
-        return <Badge>Padrão</Badge>
-    }
+  const renderBadge = (type: AlertItem["type"]) => {
+    const colors = COLOR_MAP[type] ?? COLOR_MAP.info
+    return <Badge className={colors.badge}>{type.toUpperCase()}</Badge>
   }
 
-  const markAsRead = (id: string) => {
-    setAlerts(alerts.map((alert) => (alert.id === id ? { ...alert, read: true } : alert)))
+  const containerClasses = (type: AlertItem["type"], read: boolean) => {
+    if (read) return "rounded-lg border p-4 bg-card border-border"
+    const colors = COLOR_MAP[type] ?? COLOR_MAP.info
+    return `rounded-lg border p-4 ${colors.container}`
   }
 
   const unreadCount = alerts.filter((a) => !a.read).length
@@ -95,7 +116,7 @@ export function AlertCenter() {
         )}
       </div>
 
-      <Card>
+      <Card className="bg-card text-card-foreground">
         <CardHeader>
           <CardTitle>Alertas Recentes</CardTitle>
           <CardDescription>Fique atento às suas finanças</CardDescription>
@@ -113,24 +134,25 @@ export function AlertCenter() {
                 alerts.map((alert) => (
                   <div
                     key={alert.id}
-                    className={`rounded-lg border p-4 ${getAlertColor(alert.type)} ${!alert.read ? "font-semibold" : ""}`}
+                    className={`${containerClasses(alert.type, alert.read)} ${!alert.read ? "font-semibold" : ""}`}
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex-1">
                         <div className="mb-1 flex items-center gap-2">
                           <p className="font-semibold">{alert.title}</p>
-                          {getAlertBadge(alert.type)}
+                          {renderBadge(alert.type)}
                           {!alert.read && <div className="h-2 w-2 rounded-full bg-blue-500" />}
                         </div>
-                        <p className="text-sm text-gray-700">{alert.message}</p>
+                        <p className="text-sm text-muted-foreground">{alert.message}</p>
                         <p className="mt-1 text-xs text-muted-foreground">{formatDate(alert.date)}</p>
                       </div>
                       {!alert.read && (
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => markAsRead(alert.id)}
+                          onClick={() => void handleMarkAsRead(alert.id)}
                           className="whitespace-nowrap"
+                          disabled={isSyncing}
                         >
                           Marcar como lida
                         </Button>

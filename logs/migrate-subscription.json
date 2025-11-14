@@ -1,0 +1,47 @@
+[
+  {
+    "timestamp": "2025-11-11T00:37:51.360Z",
+    "migration": "add_subscription_schema",
+    "result": "error"
+  },
+  {
+    "timestamp": "2025-11-11T00:37:58.470Z",
+    "migration": "add_subscription_schema",
+    "result": "error"
+  },
+  {
+    "timestamp": "2025-11-11T00:51:50.788Z",
+    "migration": "add_subscription_schema",
+    "result": "error"
+  },
+  {
+    "timestamp": "2025-11-11T00:52:29.990Z",
+    "migration": "add_subscription_schema",
+    "result": "error"
+  },
+  {
+    "timestamp": "2025-11-11T00:53:20.605Z",
+    "migration": "add_subscription_schema",
+    "result": "error"
+  },
+  {
+    "timestamp": "2025-11-11T00:53:55.110Z",
+    "migration": "add_subscription_schema",
+    "result": "error"
+  },
+  {
+    "timestamp": "2025-11-11T00:54:48.261Z",
+    "migration": "add_subscription_schema",
+    "result": "error"
+  },
+  {
+    "timestamp": "2025-11-11T00:55:07.934Z",
+    "migration": "add_subscription_schema",
+    "result": "error"
+  },
+  {
+    "timestamp": "2025-11-11T00:59:34.117Z",
+    "migration": "add_subscription_schema",
+    "result": "ok"
+  }
+]

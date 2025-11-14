@@ -19,7 +19,7 @@
   --accent: oklch(0.97 0 0);
   --accent-foreground: oklch(0.205 0 0);
   --destructive: oklch(0.577 0.245 27.325);
-  --destructive-foreground: oklch(0.577 0.245 27.325);
+  --destructive-foreground: oklch(0.985 0 0);
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
   --ring: oklch(0.708 0 0);
@@ -40,38 +40,38 @@
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.145 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.145 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.985 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.396 0.141 25.723);
-  --destructive-foreground: oklch(0.637 0.237 25.331);
-  --border: oklch(0.269 0 0);
-  --input: oklch(0.269 0 0);
-  --ring: oklch(0.439 0 0);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(0.269 0 0);
-  --sidebar-ring: oklch(0.439 0 0);
+  --background: #030817;
+  --foreground: #f6f9ff;
+  --card: #0b1124;
+  --card-foreground: #f6f9ff;
+  --popover: #0f1731;
+  --popover-foreground: #f6f9ff;
+  --primary: #1d5ae5;
+  --primary-foreground: #01040d;
+  --secondary: #4f46e5;
+  --secondary-foreground: #f6f9ff;
+  --muted: #131b33;
+  --muted-foreground: #c7d5ff;
+  --accent: #9333ea;
+  --accent-foreground: #fdf7ff;
+  --destructive: #ea580a;
+  --destructive-foreground: #030817;
+  --border: #131a32;
+  --input: #131a32;
+  --ring: #1d5ae5;
+  --chart-1: #1d5ae5;
+  --chart-2: #9333ea;
+  --chart-3: #ea580a;
+  --chart-4: #19a34a;
+  --chart-5: #e09e56;
+  --sidebar: #040c1d;
+  --sidebar-foreground: #f6f9ff;
+  --sidebar-primary: #4f46e5;
+  --sidebar-primary-foreground: #f6f9ff;
+  --sidebar-accent: #111832;
+  --sidebar-accent-foreground: #f6f9ff;
+  --sidebar-border: #131a32;
+  --sidebar-ring: #1d5ae5;
 }
 
 @theme {
@@ -137,5 +137,80 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+@layer base {
+  .dark .bg-white,
+  .dark .bg-gray-50,
+  .dark .bg-surface,
+  .dark .bg-card,
+  .dark .bg-background {
+    background-color: var(--card) !important;
+    color: var(--card-foreground) !important;
+  }
+
+  .dark .bg-muted {
+    background-color: var(--muted) !important;
+    color: var(--muted-foreground) !important;
+  }
+
+  .dark .text-gray-700,
+  .dark .text-gray-600,
+  .dark .text-gray-500,
+  .dark .text-muted-foreground {
+    color: var(--muted-foreground) !important;
+  }
+
+  .dark .text-gray-900,
+  .dark .text-gray-800 {
+    color: var(--foreground) !important;
+  }
+
+  .dark .border-gray-200,
+  .dark .border-gray-100,
+  .dark .border {
+    border-color: var(--border) !important;
+  }
+
+  .dark .bg-gradient-to-r.from-primary.to-primary\/80 {
+    background-image: linear-gradient(135deg, #1d5ae5, #4f46e5) !important;
+  }
+
+  .dark .shadow,
+  .dark .shadow-md,
+  .dark .shadow-lg {
+    box-shadow: 0 5px 25px rgba(10, 20, 45, 0.5) !important;
+  }
+
+  .dark .text-green-500,
+  .dark .text-green-600,
+  .dark .text-emerald-500 {
+    color: #19a34a !important;
+  }
+
+  .dark .text-yellow-500,
+  .dark .text-yellow-600,
+  .dark .text-orange-500 {
+    color: #e09e56 !important;
+  }
+
+  .dark .text-orange-600,
+  .dark .text-red-500 {
+    color: #ea580a !important;
+  }
+
+  .dark input,
+  .dark textarea,
+  .dark select {
+    background-color: var(--input) !important;
+    color: var(--foreground) !important;
+    border-color: var(--border) !important;
+  }
+
+  .dark input::placeholder,
+  .dark textarea::placeholder {
+    color: var(--muted-foreground) !important;
+    opacity: 0.6;
   }
 }

@@ -179,7 +179,7 @@ curl -X POST http://localhost:3000/api/budgets \
 ```bash
 # Procurar por credenciais hardcoded
 grep -r "Nina123" .
-grep -r "smonteiro.jr1@gmail.com" .
+grep -r "contato@example.com" .
 ```
 - [ ] Nenhum resultado (ou apenas em arquivos de documentação)
 - [ ] `prisma/import-real-data.ts` usa `process.env.IMPORT_USER_EMAIL`

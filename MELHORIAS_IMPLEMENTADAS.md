@@ -78,7 +78,7 @@ datasource db {
 const hashedPassword = await bcrypt.hash('Nina123', 10)  // ❌ EXPOSTO
 const user = await prisma.user.create({
   data: {
-    email: 'smonteiro.jr1@gmail.com',  // ❌ EXPOSTO
+    email: 'dev.user+finance@example.com',  // ❌ EXPOSTO
 ```
 
 **Depois**:
